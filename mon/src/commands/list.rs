@@ -1,6 +1,7 @@
 use std::fs;
 use std::fs::DirEntry;
 use crate::drm::Card;
+use crate::types::monitor::{Monitor};
 
 fn open_card_file(card_file: DirEntry) -> Option<Card> {
         let name = card_file.file_name();
@@ -14,8 +15,10 @@ fn open_card_file(card_file: DirEntry) -> Option<Card> {
     Some(card)
 }
 
+
 pub fn list_monitors() {
     let cards = fs::read_dir("/dev/dri/").unwrap();
+    let mut monitors : Vec<Monitor>; 
     for card_rs in cards {
         let card_file = card_rs.unwrap();
         if let Some(card) = open_card_file(card_file) {

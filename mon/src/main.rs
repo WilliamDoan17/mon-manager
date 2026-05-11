@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 mod drm;
+mod types;
 
 #[derive(Parser)]
 
