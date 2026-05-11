@@ -1,0 +1,1 @@
+/home/will/Will/Projects/mon-manager/target/debug/mon: /home/will/Will/Projects/mon-manager/mon/src/commands/list.rs /home/will/Will/Projects/mon-manager/mon/src/commands/mod.rs /home/will/Will/Projects/mon-manager/mon/src/main.rs
