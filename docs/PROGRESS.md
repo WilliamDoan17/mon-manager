@@ -4,8 +4,8 @@
 
 | Feature | Status |
 |---------|--------|
-| Project scaffold | Not started |
-| `mon list` | Not started |
+| Project scaffold | Done |
+| `mon list` | Done |
 | `mon set` | Not started |
 | `mon enable` / `mon disable` | Not started |
 | `mon mirror` | Not started |

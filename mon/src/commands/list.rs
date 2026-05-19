@@ -5,6 +5,37 @@ use drm::control::Device;
 use drm::control::connector;
 use crate::types::monitor::{Monitor, Mode};
 
+fn get_hypr_scale(monitor_name: &str) -> f32 {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let config_path = format!("{}/.config/hypr/hyprland.conf", home);
+    let content = fs::read_to_string(config_path).unwrap_or_default();
+    for line in content.lines() {
+        let line = line.trim();
+        if !line.starts_with("monitor=") {
+            continue;
+        }
+        let parts: Vec<&str> = line["monitor=".len()..].splitn(5, ',').collect();
+        if parts.len() >= 4 && parts[0] == monitor_name {
+            if let Ok(scale) = parts[3].parse::<f32>() {
+                return scale;
+            }
+        }
+    }
+    1.0
+}
+
+fn get_backlight_brightness() -> u8 {
+    (|| -> Option<u8> {
+        let mut entries = fs::read_dir("/sys/class/backlight/").ok()?;
+        let entry = entries.next()?.ok()?;
+        let base = entry.path();
+        let brightness: u32 = fs::read_to_string(base.join("brightness")).ok()?.trim().parse().ok()?;
+        let max: u32 = fs::read_to_string(base.join("max_brightness")).ok()?.trim().parse().ok()?;
+        if max == 0 { return None; }
+        Some(((brightness as f32 / max as f32) * 100.0) as u8)
+    })().unwrap_or(0)
+}
+
 fn open_card_file(card_file: DirEntry) -> Option<Card> {
     let name = card_file.file_name();
     let name_str = name.to_str().unwrap();
@@ -20,6 +51,7 @@ fn get_card_monitors(card: Card) -> Vec<Monitor> {
     let mut monitors: Vec<Monitor> = Vec::new();
     let card_resources = card.resource_handles().unwrap();
     let conn_handles = card_resources.connectors().to_vec();
+    
     for conn_handle in conn_handles {
         let conn = card.get_connector(conn_handle, false).unwrap();
         let interface_str = match conn.interface() {
@@ -33,6 +65,8 @@ fn get_card_monitors(card: Card) -> Vec<Monitor> {
         };
         let name = format!("{}-{}", interface_str, conn.interface_id());
         let connected = conn.state() == connector::State::Connected;
+        let is_internal = matches!(conn.interface(),
+            connector::Interface::LVDS | connector::Interface::EmbeddedDisplayPort);
         let modes: Vec<Mode> = conn.modes().iter().map(|m| Mode {
             width: m.size().0 as u32,
             height: m.size().1 as u32,
@@ -53,6 +87,8 @@ fn get_card_monitors(card: Card) -> Vec<Monitor> {
             })
             .unwrap_or((false, None, (0, 0)));
 
+        let scale = get_hypr_scale(&name);
+        let brightness = if is_internal { get_backlight_brightness() } else { 0 };
         monitors.push(Monitor {
             name,
             alias: None,
@@ -61,8 +97,8 @@ fn get_card_monitors(card: Card) -> Vec<Monitor> {
             modes,
             active_mode,
             position,
-            scale: 1.0,
-            brightness: 0,
+            scale,
+            brightness,
         });
     }
     monitors
